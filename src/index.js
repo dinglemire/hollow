@@ -5,6 +5,7 @@ import CharmEditor from "./CharmEditor.js";
 import InventoryEditor from "./InventoryEditor.js";
 import "./style.css";
 
+// ... [useDragDrop hook is the same as before] ...
 function useDragDrop(onDrop) {
     const [isDragging, setIsDragging] = useState(false);
     useEffect(() => {
@@ -29,15 +30,16 @@ function useDragDrop(onDrop) {
 }
 
 function App() {
+    // ... [State variables are the same] ...
     const [fileData, setFileData] = useState("");
     const [fileName, setFileName] = useState("");
     const [originalData, setOriginalData] = useState("");
     const [isSwitchMode, setIsSwitchMode] = useState(false);
     const [activeTab, setActiveTab] = useState("charms");
     const [history, setHistory] = useState([]);
-    
     const fileInputRef = useRef(null);
 
+    // ... [useEffect and helper functions same as before] ...
     useEffect(() => {
         try {
             const saved = localStorage.getItem("hollow_history");
@@ -59,7 +61,6 @@ function App() {
         const reader = new FileReader();
         if (isSwitchMode) reader.readAsText(file);
         else reader.readAsArrayBuffer(file);
-
         reader.onload = () => {
             try {
                 let decrypted = isSwitchMode ? reader.result : Decode(new Uint8Array(reader.result));
@@ -98,7 +99,6 @@ function App() {
         return fullJson;
     };
 
-    // Single Update
     const handleVisualUpdate = (key, value) => {
         try {
             const fullJson = JSON.parse(fileData);
@@ -108,17 +108,13 @@ function App() {
         } catch (e) { console.error("Error updating JSON", e); }
     };
 
-    // NEW: Bulk Update (For Presets)
     const handleBulkUpdate = (updates) => {
         try {
             const fullJson = JSON.parse(fileData);
             const target = fullJson.playerData ? fullJson.playerData : fullJson;
-
-            // Apply all updates at once
             Object.entries(updates).forEach(([key, value]) => {
                 target[key] = value;
             });
-
             setFileData(JSON.stringify(fullJson, null, 2));
         } catch (e) { console.error("Error bulk updating", e); }
     };
@@ -126,7 +122,6 @@ function App() {
     let parsedData = {};
     let editingData = {};
     let isValidJson = true;
-    
     if (fileData) {
         try { 
             parsedData = JSON.parse(fileData);
@@ -143,11 +138,23 @@ function App() {
             </header>
 
             <div className="controls">
-                <button id="file-button" onClick={() => fileInputRef.current.click()}>Open Save File</button>
-                <label className="switch-toggle">
-                    <input type="checkbox" checked={isSwitchMode} onChange={() => setIsSwitchMode(!isSwitchMode)} />
-                    Switch Mode (Plain Text)
-                </label>
+                <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
+                    
+                    <div style={{display: 'flex', gap: '20px', alignItems: 'center'}}>
+                        <button id="file-button" onClick={() => fileInputRef.current.click()}>Open Save File</button>
+                        <label className="switch-toggle">
+                            <input type="checkbox" checked={isSwitchMode} onChange={() => setIsSwitchMode(!isSwitchMode)} />
+                            Switch Mode (Plain Text)
+                        </label>
+                    </div>
+
+                    {/* --- THE NEW PATH HELPER --- */}
+                    <div className="path-helper">
+                        <span>📍 PC Location:</span>
+                        <code>%AppData%\..\LocalLow\Team Cherry\Hollow Knight\</code>
+                    </div>
+
+                </div>
             </div>
 
             <input type="file" ref={fileInputRef} onChange={(e) => e.target.files.length > 0 && processFile(e.target.files[0])} style={{display: 'none'}} />
@@ -168,11 +175,7 @@ function App() {
                     ) : (
                         <div id="visual-editor">
                             {activeTab === 'charms' && (
-                                <CharmEditor 
-                                    data={editingData} 
-                                    onUpdate={handleVisualUpdate} 
-                                    onBulkUpdate={handleBulkUpdate} // Pass the new function
-                                />
+                                <CharmEditor data={editingData} onUpdate={handleVisualUpdate} onBulkUpdate={handleBulkUpdate} />
                             )}
                             {activeTab === 'inventory' && (
                                 <InventoryEditor data={editingData} onUpdate={handleVisualUpdate} />
