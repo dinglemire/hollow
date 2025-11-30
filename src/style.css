@@ -279,3 +279,9 @@ body {
     border-color: royalblue;
     outline: none;
 }
+
+
+.charm-card.modified {
+    border-color: #00ff00; /* Green border for edited charms */
+    background: #2f3a2f;
+}
