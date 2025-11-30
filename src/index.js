@@ -63,7 +63,6 @@ function App() {
         reader.onload = () => {
             try {
                 let decrypted = isSwitchMode ? reader.result : Decode(new Uint8Array(reader.result));
-                // Ensure it is pretty printed
                 const jsonString = JSON.stringify(JSON.parse(decrypted), null, 2);
                 setFileData(jsonString);
                 setOriginalData(jsonString);
@@ -94,25 +93,34 @@ function App() {
         }
     };
 
-    // --- HELPER TO FIND THE REAL DATA ---
     const getEditingContext = (fullJson) => {
         if (fullJson.playerData) return fullJson.playerData;
         return fullJson;
     };
 
+    // Single Update
     const handleVisualUpdate = (key, value) => {
         try {
             const fullJson = JSON.parse(fileData);
-            
-            // Auto-detect where to save (Root or PlayerData)
-            if (fullJson.playerData) {
-                fullJson.playerData[key] = value;
-            } else {
-                fullJson[key] = value;
-            }
-
+            if (fullJson.playerData) fullJson.playerData[key] = value;
+            else fullJson[key] = value;
             setFileData(JSON.stringify(fullJson, null, 2));
         } catch (e) { console.error("Error updating JSON", e); }
+    };
+
+    // NEW: Bulk Update (For Presets)
+    const handleBulkUpdate = (updates) => {
+        try {
+            const fullJson = JSON.parse(fileData);
+            const target = fullJson.playerData ? fullJson.playerData : fullJson;
+
+            // Apply all updates at once
+            Object.entries(updates).forEach(([key, value]) => {
+                target[key] = value;
+            });
+
+            setFileData(JSON.stringify(fullJson, null, 2));
+        } catch (e) { console.error("Error bulk updating", e); }
     };
 
     let parsedData = {};
@@ -122,7 +130,6 @@ function App() {
     if (fileData) {
         try { 
             parsedData = JSON.parse(fileData);
-            // This is the magic fix: We send the INNER object to the editors
             editingData = getEditingContext(parsedData);
         } catch (e) { isValidJson = false; }
     }
@@ -161,7 +168,11 @@ function App() {
                     ) : (
                         <div id="visual-editor">
                             {activeTab === 'charms' && (
-                                <CharmEditor data={editingData} onUpdate={handleVisualUpdate} />
+                                <CharmEditor 
+                                    data={editingData} 
+                                    onUpdate={handleVisualUpdate} 
+                                    onBulkUpdate={handleBulkUpdate} // Pass the new function
+                                />
                             )}
                             {activeTab === 'inventory' && (
                                 <InventoryEditor data={editingData} onUpdate={handleVisualUpdate} />
