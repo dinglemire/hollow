@@ -1,0 +1,53 @@
+// src/charmData.js
+export const CHARM_MAP = {
+    "charmCost_1":  { name: "Gathering Swarm", img: "charm_1.png" },
+    "charmCost_2":  { name: "Wayward Compass", img: "charm_2.png" },
+    "charmCost_3":  { name: "Grubsong", img: "charm_3.png" },
+    "charmCost_4":  { name: "Stalwart Shell", img: "charm_4.png" },
+    "charmCost_5":  { name: "Baldur Shell", img: "charm_5.png" },
+    "charmCost_6":  { name: "Fury of the Fallen", img: "charm_6.png" },
+    "charmCost_7":  { name: "Quick Focus", img: "charm_7.png" },
+    "charmCost_8":  { name: "Lifeblood Heart", img: "charm_8.png" },
+    "charmCost_9":  { name: "Lifeblood Core", img: "charm_9.png" },
+    "charmCost_10": { name: "Defender's Crest", img: "charm_10.png" },
+    "charmCost_11": { name: "Flukenest", img: "charm_11.png" },
+    "charmCost_12": { name: "Thorns of Agony", img: "charm_12.png" },
+    "charmCost_13": { name: "Mark of Pride", img: "charm_13.png" },
+
+    "charmCost_14": { name: "Steady Body", img: "charm_14.png" },
+    "charmCost_15": { name: "Heavy Blow", img: "charm_15.png" },
+    "charmCost_16": { name: "Sharp Shadow", img: "charm_16.png" },
+    "charmCost_17": { name: "Spore Shroom", img: "charm_17.png" },
+    "charmCost_18": { name: "Longnail", img: "charm_18.png" },
+    "charmCost_19": { name: "Shaman Stone", img: "charm_19.png" },
+    "charmCost_20": { name: "Soul Catcher", img: "charm_20.png" },
+    "charmCost_21": { name: "Soul Eater", img: "charm_21.png" },
+    "charmCost_22": { name: "Glowing Womb", img: "charm_22.png" },
+    "charmCost_23": { name: "Fragile Heart", img: "charm_23.png" },
+    "charmCost_24": { name: "Fragile Greed", img: "charm_24.png" },
+    "charmCost_25": { name: "Fragile Strength", img: "charm_25.png" },
+    "charmCost_26": { name: "Unbreakable Heart", img: "charm_26.png" },
+    "charmCost_27": { name: "Unbreakable Greed", img: "charm_27.png" },
+    "charmCost_28": { name: "Unbreakable Strength", img: "charm_28.png" },
+    "charmCost_29": { name: "Spell Twister", img: "charm_29.png" },
+    "charmCost_30": { name: "Dashmaster", img: "charm_30.png" },
+    "charmCost_31": { name: "Quick Slash", img: "charm_31.png" },
+    "charmCost_32": { name: "Deep Focus", img: "charm_32.png" },
+    "charmCost_33": { name: "Grubberfly's Elegy", img: "charm_33.png" },
+    "charmCost_34": { name: "Hiveblood", img: "charm_34.png" },
+    "charmCost_35": { name: "Spore Shroom (Unused Duplicate)", img: "charm_35.png" }, // often unused
+    "charmCost_36": { name: "Dream Wielder", img: "charm_36.png" },
+    "charmCost_37": { name: "Dreamshield", img: "charm_37.png" },
+    "charmCost_38": { name: "Weaversong", img: "charm_38.png" },
+    "charmCost_39": { name: "Sprintmaster", img: "charm_39.png" },
+    "charmCost_40": { name: "Grimmchild", img: "charm_40.png" },
+
+    // Grimmchild stages are sometimes exposed separately:
+    "charmCost_41": { name: "Grimmchild (Level 2)", img: "charm_41.png" },
+    "charmCost_42": { name: "Grimmchild (Level 3)", img: "charm_42.png" },
+    "charmCost_43": { name: "Grimmchild (Level 4)", img: "charm_43.png" },
+
+    // Kingsoul → becomes Void Heart
+    "charmCost_44": { name: "Kingsoul", img: "charm_44.png" },
+    "charmCost_45": { name: "Void Heart", img: "charm_45.png" },
+};
