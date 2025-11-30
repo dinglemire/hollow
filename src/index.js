@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { Encode, Decode, Hash, DownloadData, HumanTime } from "./functions.js";
 import CharmEditor from "./CharmEditor.js";
-import InventoryEditor from "./InventoryEditor.js"; // <--- Import new component
+import InventoryEditor from "./InventoryEditor.js";
 import "./style.css";
 
 function useDragDrop(onDrop) {
@@ -33,11 +33,9 @@ function App() {
     const [fileName, setFileName] = useState("");
     const [originalData, setOriginalData] = useState("");
     const [isSwitchMode, setIsSwitchMode] = useState(false);
-    
-    // NEW: Tab state can be 'charms', 'inventory', or 'json'
-    const [activeTab, setActiveTab] = useState("charms"); 
-    
+    const [activeTab, setActiveTab] = useState("charms");
     const [history, setHistory] = useState([]);
+    
     const fileInputRef = useRef(null);
 
     useEffect(() => {
@@ -65,6 +63,7 @@ function App() {
         reader.onload = () => {
             try {
                 let decrypted = isSwitchMode ? reader.result : Decode(new Uint8Array(reader.result));
+                // Ensure it is pretty printed
                 const jsonString = JSON.stringify(JSON.parse(decrypted), null, 2);
                 setFileData(jsonString);
                 setOriginalData(jsonString);
@@ -95,18 +94,37 @@ function App() {
         }
     };
 
+    // --- HELPER TO FIND THE REAL DATA ---
+    const getEditingContext = (fullJson) => {
+        if (fullJson.playerData) return fullJson.playerData;
+        return fullJson;
+    };
+
     const handleVisualUpdate = (key, value) => {
         try {
-            const data = JSON.parse(fileData);
-            data[key] = value;
-            setFileData(JSON.stringify(data, null, 2));
+            const fullJson = JSON.parse(fileData);
+            
+            // Auto-detect where to save (Root or PlayerData)
+            if (fullJson.playerData) {
+                fullJson.playerData[key] = value;
+            } else {
+                fullJson[key] = value;
+            }
+
+            setFileData(JSON.stringify(fullJson, null, 2));
         } catch (e) { console.error("Error updating JSON", e); }
     };
 
     let parsedData = {};
+    let editingData = {};
     let isValidJson = true;
+    
     if (fileData) {
-        try { parsedData = JSON.parse(fileData); } catch (e) { isValidJson = false; }
+        try { 
+            parsedData = JSON.parse(fileData);
+            // This is the magic fix: We send the INNER object to the editors
+            editingData = getEditingContext(parsedData);
+        } catch (e) { isValidJson = false; }
     }
 
     return (
@@ -132,23 +150,21 @@ function App() {
                     <div id="editor-header">
                         <span>Editing: <strong>{fileName}</strong></span>
                         <div className="view-toggles">
-                            {/* TAB BUTTONS */}
                             <button className={activeTab === 'charms' ? 'active' : ''} onClick={() => setActiveTab('charms')}>Charms</button>
                             <button className={activeTab === 'inventory' ? 'active' : ''} onClick={() => setActiveTab('inventory')}>Inventory</button>
                             <button className={activeTab === 'json' ? 'active' : ''} onClick={() => setActiveTab('json')}>JSON</button>
                         </div>
                     </div>
 
-                    {/* CONTENT AREA SWITCHER */}
                     {activeTab === 'json' || !isValidJson ? (
                         <textarea id="editor" value={fileData} onChange={(e) => setFileData(e.target.value)} spellCheck={false} />
                     ) : (
                         <div id="visual-editor">
                             {activeTab === 'charms' && (
-                                <CharmEditor data={parsedData} onUpdate={handleVisualUpdate} />
+                                <CharmEditor data={editingData} onUpdate={handleVisualUpdate} />
                             )}
                             {activeTab === 'inventory' && (
-                                <InventoryEditor data={parsedData} onUpdate={handleVisualUpdate} />
+                                <InventoryEditor data={editingData} onUpdate={handleVisualUpdate} />
                             )}
                         </div>
                     )}
