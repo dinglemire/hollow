@@ -172,3 +172,110 @@ body {
   width: 100vw; 
   height: 100vh;
 }
+
+/* ... keep your existing css ... */
+
+/* New Visual Editor Styles */
+.controls-row {
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+}
+.checkbox-wrapper {
+    margin-left: 15px;
+}
+
+#editor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    background: #f0f0f0;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.view-toggles button {
+    margin-left: 5px;
+    cursor: pointer;
+    background: #ddd;
+    border: none;
+    border-radius: 4px;
+}
+.view-toggles button.active {
+    background: royalblue;
+    color: white;
+}
+
+#visual-editor {
+    border: 1px solid #888;
+    border-radius: 5px;
+    padding: 15px;
+    background: #2b2b2b; /* Dark background for charms */
+    min-height: 500px;
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.charm-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 15px;
+}
+
+.charm-card {
+    background: #333;
+    color: #fff;
+    border: 1px solid #555;
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    transition: transform 0.2s;
+}
+
+.charm-card:hover {
+    transform: translateY(-2px);
+    border-color: royalblue;
+}
+
+.charm-card img {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+    margin-bottom: 8px;
+}
+
+.charm-name {
+    font-size: 0.85em;
+    height: 2.5em; /* fixed height for 2 lines */
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.charm-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.9em;
+}
+
+.charm-input-wrapper input {
+    width: 50px;
+    text-align: center;
+    padding: 4px;
+    border-radius: 3px;
+    border: 1px solid #555;
+    background: #222;
+    color: white;
+    font-weight: bold;
+}
+
+.charm-input-wrapper input:focus {
+    border-color: royalblue;
+    outline: none;
+}
