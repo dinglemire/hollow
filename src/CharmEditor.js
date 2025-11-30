@@ -1,36 +1,35 @@
-// src/CharmEditor.js
 import React from "react";
 import { CHARM_MAP } from "./charmData";
 
 export default class CharmEditor extends React.Component {
     handleChange = (key, value) => {
-        // Parse the value to int, default to 0 if empty
-        const intVal = parseInt(value, 10) || 0;
+        const intVal = parseInt(value, 10);
+        // If it's NaN (empty), don't update yet
+        if (isNaN(intVal)) return;
         this.props.onUpdate(key, intVal);
     };
 
     render() {
         const { data } = this.props;
-        
-        // We filter the map to only show charms that actually exist in the save file
-        const availableCharms = Object.keys(CHARM_MAP).filter(key => data.hasOwnProperty(key));
-
-        if (availableCharms.length === 0) {
-            return <div className="no-charms">No charm data found in this save file.</div>;
-        }
 
         return (
             <div className="charm-grid">
-                {availableCharms.map(key => {
+                {Object.keys(CHARM_MAP).map(key => {
                     const info = CHARM_MAP[key];
-                    const currentCost = data[key];
+                    
+                    // Logic: Check if 'charmCost_X' exists in the save file.
+                    // If YES: Use that value.
+                    // If NO: Use the standard default cost (so it doesn't look like 0).
+                    const exists = data.hasOwnProperty(key);
+                    const currentCost = exists ? data[key] : info.default;
+                    const isModified = exists && data[key] !== info.default;
 
                     return (
-                        <div key={key} className="charm-card">
+                        <div key={key} className={`charm-card ${isModified ? 'modified' : ''}`}>
                             <img 
                                 src={`icons/${info.img}`} 
                                 alt={info.name} 
-                                onError={(e) => {e.target.style.display='none'}} // Hide if image missing
+                                onError={(e) => {e.target.style.display='none'}}
                             />
                             <div className="charm-name">{info.name}</div>
                             <div className="charm-input-wrapper">
