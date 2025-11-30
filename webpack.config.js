@@ -1,5 +1,6 @@
 const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
+const CopyPlugin = require("copy-webpack-plugin"); // Import the new tool
 const webpack = require("webpack");
 
 module.exports = {
@@ -7,7 +8,7 @@ module.exports = {
     output: {
         path: path.resolve(__dirname, "docs"),
         filename: "bundle.js",
-        clean: false
+        clean: true // We can keep this true now!
     },
     module: {
         rules: [
@@ -35,6 +36,12 @@ module.exports = {
     },
     plugins: [
         new HtmlWebpackPlugin({ template: "./src/index.html" }),
+        // This block copies your images safely
+        new CopyPlugin({
+            patterns: [
+                { from: "src/icons", to: "icons" }, 
+            ],
+        }),
         new webpack.ProvidePlugin({
             Buffer: ["buffer", "Buffer"],
             process: "process",
