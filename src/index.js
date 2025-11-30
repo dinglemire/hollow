@@ -2,49 +2,44 @@ import React, { useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { Encode, Decode, Hash, DownloadData, HumanTime } from "./functions.js";
 import CharmEditor from "./CharmEditor.js";
+import InventoryEditor from "./InventoryEditor.js"; // <--- Import new component
 import "./style.css";
 
-// --- Drag & Drop Hook ---
 function useDragDrop(onDrop) {
     const [isDragging, setIsDragging] = useState(false);
-
     useEffect(() => {
         const handleDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
         const handleDragLeave = (e) => { e.preventDefault(); setIsDragging(false); };
         const handleDrop = (e) => {
-            e.preventDefault();
-            setIsDragging(false);
+            e.preventDefault(); setIsDragging(false);
             if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
                 onDrop(e.dataTransfer.files[0]);
             }
         };
-
         window.addEventListener("dragover", handleDragOver);
         window.addEventListener("dragleave", handleDragLeave);
         window.addEventListener("drop", handleDrop);
-
         return () => {
             window.removeEventListener("dragover", handleDragOver);
             window.removeEventListener("dragleave", handleDragLeave);
             window.removeEventListener("drop", handleDrop);
         };
     }, [onDrop]);
-
     return isDragging;
 }
 
-// --- Main App Component ---
 function App() {
-    const [fileData, setFileData] = useState(""); // The JSON content
+    const [fileData, setFileData] = useState("");
     const [fileName, setFileName] = useState("");
     const [originalData, setOriginalData] = useState("");
     const [isSwitchMode, setIsSwitchMode] = useState(false);
-    const [viewMode, setViewMode] = useState("visual"); // 'visual' or 'text'
-    const [history, setHistory] = useState([]);
     
+    // NEW: Tab state can be 'charms', 'inventory', or 'json'
+    const [activeTab, setActiveTab] = useState("charms"); 
+    
+    const [history, setHistory] = useState([]);
     const fileInputRef = useRef(null);
 
-    // Load history from LocalStorage on start
     useEffect(() => {
         try {
             const saved = localStorage.getItem("hollow_history");
@@ -52,7 +47,6 @@ function App() {
         } catch (e) { console.error(e); }
     }, []);
 
-    // Save history when it changes
     useEffect(() => {
         localStorage.setItem("hollow_history", JSON.stringify(history));
     }, [history]);
@@ -60,7 +54,6 @@ function App() {
     const addToHistory = (json, name) => {
         const hash = Hash(json);
         const newItem = { hash, fileName: name, date: new Date().toISOString(), jsonString: json };
-        // Add to top, remove duplicates, limit to 5
         setHistory(prev => [newItem, ...prev.filter(i => i.hash !== hash)].slice(0, 5));
     };
 
@@ -71,13 +64,8 @@ function App() {
 
         reader.onload = () => {
             try {
-                let decrypted = isSwitchMode 
-                    ? reader.result 
-                    : Decode(new Uint8Array(reader.result));
-                
-                // Format JSON
+                let decrypted = isSwitchMode ? reader.result : Decode(new Uint8Array(reader.result));
                 const jsonString = JSON.stringify(JSON.parse(decrypted), null, 2);
-                
                 setFileData(jsonString);
                 setOriginalData(jsonString);
                 setFileName(file.name);
@@ -87,17 +75,15 @@ function App() {
                 console.error(err);
             }
         };
-        reader.readAsArrayBuffer(file); // Trigger read
+        reader.readAsArrayBuffer(file);
     };
 
     const isDragging = useDragDrop(processFile);
 
     const handleDownload = (type) => {
         try {
-            // Validate JSON before saving
             const obj = JSON.parse(fileData);
-            const str = JSON.stringify(obj); // Minify for saving
-            
+            const str = JSON.stringify(obj);
             if (type === 'switch') {
                 DownloadData(JSON.stringify(obj, null, 2), "plain.dat");
             } else {
@@ -109,7 +95,6 @@ function App() {
         }
     };
 
-    // Updates from Visual Editor
     const handleVisualUpdate = (key, value) => {
         try {
             const data = JSON.parse(fileData);
@@ -127,7 +112,6 @@ function App() {
     return (
         <div id="wrapper">
             {isDragging && <div id="cover">Drop file to load</div>}
-            
             <header>
                 <h1>Hollow Knight Save Editor</h1>
                 <p>Modify your save. Works for PC and Switch.</p>
@@ -141,33 +125,31 @@ function App() {
                 </label>
             </div>
 
-            <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={(e) => e.target.files.length > 0 && processFile(e.target.files[0])} 
-                style={{display: 'none'}} 
-            />
+            <input type="file" ref={fileInputRef} onChange={(e) => e.target.files.length > 0 && processFile(e.target.files[0])} style={{display: 'none'}} />
 
             {fileData && (
                 <div id="editor-wrapper">
                     <div id="editor-header">
                         <span>Editing: <strong>{fileName}</strong></span>
                         <div className="view-toggles">
-                            <button className={viewMode === 'visual' ? 'active' : ''} onClick={() => setViewMode('visual')}>Visual</button>
-                            <button className={viewMode === 'text' ? 'active' : ''} onClick={() => setViewMode('text')}>JSON</button>
+                            {/* TAB BUTTONS */}
+                            <button className={activeTab === 'charms' ? 'active' : ''} onClick={() => setActiveTab('charms')}>Charms</button>
+                            <button className={activeTab === 'inventory' ? 'active' : ''} onClick={() => setActiveTab('inventory')}>Inventory</button>
+                            <button className={activeTab === 'json' ? 'active' : ''} onClick={() => setActiveTab('json')}>JSON</button>
                         </div>
                     </div>
 
-                    {viewMode === 'text' || !isValidJson ? (
-                        <textarea 
-                            id="editor" 
-                            value={fileData} 
-                            onChange={(e) => setFileData(e.target.value)} 
-                            spellCheck={false} 
-                        />
+                    {/* CONTENT AREA SWITCHER */}
+                    {activeTab === 'json' || !isValidJson ? (
+                        <textarea id="editor" value={fileData} onChange={(e) => setFileData(e.target.value)} spellCheck={false} />
                     ) : (
                         <div id="visual-editor">
-                            <CharmEditor data={parsedData} onUpdate={handleVisualUpdate} />
+                            {activeTab === 'charms' && (
+                                <CharmEditor data={parsedData} onUpdate={handleVisualUpdate} />
+                            )}
+                            {activeTab === 'inventory' && (
+                                <InventoryEditor data={parsedData} onUpdate={handleVisualUpdate} />
+                            )}
                         </div>
                     )}
 
