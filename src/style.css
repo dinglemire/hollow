@@ -237,3 +237,8 @@ textarea#editor {
   z-index: 999;
   backdrop-filter: blur(5px);
 }
+
+/* Add this to src/style.css */
+.inventory-grid .charm-input-wrapper input {
+    width: 80px; /* Wider input box for Geo/PlayTime */
+}
