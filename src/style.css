@@ -242,3 +242,31 @@ textarea#editor {
 .inventory-grid .charm-input-wrapper input {
     width: 80px; /* Wider input box for Geo/PlayTime */
 }
+
+/* Add to src/style.css */
+
+.path-helper {
+    font-size: 0.85em;
+    color: #888;
+    background: rgba(0,0,0,0.3);
+    padding: 8px 12px;
+    border-radius: 4px;
+    display: inline-block;
+    border: 1px solid #333;
+}
+
+.path-helper code {
+    color: #a0c0ff;
+    margin-left: 8px;
+    font-family: monospace;
+    background: rgba(255,255,255,0.05);
+    padding: 2px 5px;
+    border-radius: 3px;
+    user-select: all; /* Makes it easy to select the whole path */
+}
+
+.sub-text {
+    font-size: 0.7em;
+    color: #666;
+    margin-top: 4px;
+}
