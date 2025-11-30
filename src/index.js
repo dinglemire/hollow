@@ -1,245 +1,199 @@
-// src/index.js
-import React, { Fragment } from "react"
-import ReactDOM from "react-dom"
-import { Encode, Decode, Hash, DownloadData, HumanTime } from "./functions.js"
-import History from "./history.js"
-import WindowDrag from "./windowDrag.js"
-import CharmEditor from "./CharmEditor.js" // <--- Import the new component
-import "./style.css"
+import React, { useState, useEffect, useRef } from "react";
+import { createRoot } from "react-dom/client";
+import { Encode, Decode, Hash, DownloadData, HumanTime } from "./functions.js";
+import CharmEditor from "./CharmEditor.js";
+import "./style.css";
 
-var history = new History()
-var windowDrag = new WindowDrag()
+// --- Drag & Drop Hook ---
+function useDragDrop(onDrop) {
+    const [isDragging, setIsDragging] = useState(false);
 
-class App extends React.Component {
-    constructor(){
-        super()
-        this.fileInputRef = React.createRef()
-        // Event listeners for drag and drop
-        windowDrag.onDrop = e => this.handleFileChange(e.dataTransfer.files) 
-        windowDrag.onDragEnter = () => this.setState({ dragging: true })
-        windowDrag.onDragLeave = () => this.setState({ dragging: false })
-    }
+    useEffect(() => {
+        const handleDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
+        const handleDragLeave = (e) => { e.preventDefault(); setIsDragging(false); };
+        const handleDrop = (e) => {
+            e.preventDefault();
+            setIsDragging(false);
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                onDrop(e.dataTransfer.files[0]);
+            }
+        };
 
-    state = {
-        gameFile: "", 
-        gameFileOriginal: "",
-        editing: false,
-        dragging: false,
-        switchMode: false,
-        viewMode: "visual" // "visual" or "text"
-    }
+        window.addEventListener("dragover", handleDragOver);
+        window.addEventListener("dragleave", handleDragLeave);
+        window.addEventListener("drop", handleDrop);
 
-    handleFileClick = () => {
-        this.fileInputRef.current.click()
-    }
+        return () => {
+            window.removeEventListener("dragover", handleDragOver);
+            window.removeEventListener("dragleave", handleDragLeave);
+            window.removeEventListener("drop", handleDrop);
+        };
+    }, [onDrop]);
 
-    handleFileChange = files => {
-        if (files.length == 0) return 
-        
-        let file = files[0]
-        let reader = new FileReader()
+    return isDragging;
+}
 
-        if (this.state.switchMode){
-            reader.readAsText(file)
-        } else {
-            reader.readAsArrayBuffer(file)
-        }
+// --- Main App Component ---
+function App() {
+    const [fileData, setFileData] = useState(""); // The JSON content
+    const [fileName, setFileName] = useState("");
+    const [originalData, setOriginalData] = useState("");
+    const [isSwitchMode, setIsSwitchMode] = useState(false);
+    const [viewMode, setViewMode] = useState("visual"); // 'visual' or 'text'
+    const [history, setHistory] = useState([]);
+    
+    const fileInputRef = useRef(null);
 
-        reader.addEventListener("load", () => {
-            var result = reader.result
+    // Load history from LocalStorage on start
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem("hollow_history");
+            if (saved) setHistory(JSON.parse(saved));
+        } catch (e) { console.error(e); }
+    }, []);
+
+    // Save history when it changes
+    useEffect(() => {
+        localStorage.setItem("hollow_history", JSON.stringify(history));
+    }, [history]);
+
+    const addToHistory = (json, name) => {
+        const hash = Hash(json);
+        const newItem = { hash, fileName: name, date: new Date().toISOString(), jsonString: json };
+        // Add to top, remove duplicates, limit to 5
+        setHistory(prev => [newItem, ...prev.filter(i => i.hash !== hash)].slice(0, 5));
+    };
+
+    const processFile = (file) => {
+        const reader = new FileReader();
+        if (isSwitchMode) reader.readAsText(file);
+        else reader.readAsArrayBuffer(file);
+
+        reader.onload = () => {
             try {
-                let decrypted = ""
-                if (this.state.switchMode) {
-                    decrypted = result
-                } else {
-                    decrypted = Decode(new Uint8Array(result))
-                }
+                let decrypted = isSwitchMode 
+                    ? reader.result 
+                    : Decode(new Uint8Array(reader.result));
                 
-                // Format JSON nicely
-                var jsonString = JSON.stringify(JSON.parse(decrypted), undefined, 2)
+                // Format JSON
+                const jsonString = JSON.stringify(JSON.parse(decrypted), null, 2);
                 
-                const hash = Hash(jsonString)
-                history.removeFromHistory(hash)
-                history.addToHistory(jsonString, file.name, hash)
-                history.syncToLocalStorage()
-                
-                this.setGameFile(jsonString, file.name)
-            } catch (err){
-                window.alert("The file could not be decrypted. Ensure it is a valid save.")
-                console.warn(err)
-            } 
-            this.fileInputRef.current.value = null
-        })
-    }
+                setFileData(jsonString);
+                setOriginalData(jsonString);
+                setFileName(file.name);
+                addToHistory(jsonString, file.name);
+            } catch (err) {
+                alert("Failed to decrypt. Is this a valid save file?");
+                console.error(err);
+            }
+        };
+        reader.readAsArrayBuffer(file); // Trigger read
+    };
 
-    handleTextEditorChange = e => {
-        this.setState({gameFile: e.target.value})
-    }
+    const isDragging = useDragDrop(processFile);
 
-    // New method to handle updates from the Visual Editor
-    handleVisualUpdate = (key, value) => {
+    const handleDownload = (type) => {
         try {
-            const data = JSON.parse(this.state.gameFile);
-            data[key] = value;
-            this.setState({ gameFile: JSON.stringify(data, undefined, 2) });
-        } catch (e) {
-            console.error("Error updating JSON", e);
-        }
-    }
-
-    handleReset = e => {
-        this.setState({
-            gameFile: this.state.gameFileOriginal
-        }) 
-    }
-
-    handleDownload = (type) => {
-        try {
-            var data = JSON.stringify(JSON.parse(this.state.gameFile))
-            if(type === 'switch') {
-                DownloadData(data, "plain.dat")
+            // Validate JSON before saving
+            const obj = JSON.parse(fileData);
+            const str = JSON.stringify(obj); // Minify for saving
+            
+            if (type === 'switch') {
+                DownloadData(JSON.stringify(obj, null, 2), "plain.dat");
             } else {
-                var encrypted = Encode(data)
-                DownloadData(encrypted, "user1.dat")
+                const encrypted = Encode(str);
+                DownloadData(encrypted, "user1.dat");
             }
-        } catch (err){
-            window.alert("Could not parse valid JSON. Reset or fix syntax errors.")
+        } catch (e) {
+            alert("Invalid JSON. Please fix errors in Text Mode before saving.");
         }
+    };
+
+    // Updates from Visual Editor
+    const handleVisualUpdate = (key, value) => {
+        try {
+            const data = JSON.parse(fileData);
+            data[key] = value;
+            setFileData(JSON.stringify(data, null, 2));
+        } catch (e) { console.error("Error updating JSON", e); }
+    };
+
+    let parsedData = {};
+    let isValidJson = true;
+    if (fileData) {
+        try { parsedData = JSON.parse(fileData); } catch (e) { isValidJson = false; }
     }
 
-    setGameFile = (jsonString, name) => {
-        // Ensure consistent formatting
-        jsonString = JSON.stringify(JSON.parse(jsonString), undefined, 2)
-        this.setState({
-            gameFile: jsonString,
-            gameFileOriginal: jsonString,
-            gameFileName: name, 
-            editing: true 
-        })
-    }
-
-    render(){
-        let parsedData = {};
-        let isValidJson = true;
-        
-        if (this.state.editing) {
-            try {
-                parsedData = JSON.parse(this.state.gameFile);
-            } catch (e) {
-                isValidJson = false;
-            }
-        }
-
-        return <div id="wrapper">
-            {this.state.dragging && <div id="cover"></div>}
+    return (
+        <div id="wrapper">
+            {isDragging && <div id="cover">Drop file to load</div>}
             
-            <p id="description">Hollow Knight Save Editor & Visual Charm Manager</p>
-            <p id="source">Source on <a href="https://github.com/bloodorca/hollow">github</a>.</p>
-            
-            <div className="controls-row">
-                <button id="file-button" onClick={this.handleFileClick}>Open Save File</button>
-                <div className="checkbox-wrapper">
-                    <input 
-                        checked={this.state.switchMode} 
-                        onClick={() => this.setState({switchMode: !this.state.switchMode})} 
-                        type="checkbox" 
-                        id="switch-save"
-                    />
-                    <label htmlFor="switch-save">Nintendo Switch Mode</label>
-                </div>
+            <header>
+                <h1>Hollow Knight Save Editor</h1>
+                <p>Modify your save. Works for PC and Switch.</p>
+            </header>
+
+            <div className="controls">
+                <button id="file-button" onClick={() => fileInputRef.current.click()}>Open Save File</button>
+                <label className="switch-toggle">
+                    <input type="checkbox" checked={isSwitchMode} onChange={() => setIsSwitchMode(!isSwitchMode)} />
+                    Switch Mode (Plain Text)
+                </label>
             </div>
 
             <input 
-                onChange={e => this.handleFileChange(this.fileInputRef.current.files)} 
-                id="file-input" 
-                ref={this.fileInputRef} 
-                type="file"
+                type="file" 
+                ref={fileInputRef} 
+                onChange={(e) => e.target.files.length > 0 && processFile(e.target.files[0])} 
+                style={{display: 'none'}} 
             />
 
-            {this.state.editing && (
+            {fileData && (
                 <div id="editor-wrapper">
                     <div id="editor-header">
-                        <span id="editor-name">{this.state.gameFileName}</span>
+                        <span>Editing: <strong>{fileName}</strong></span>
                         <div className="view-toggles">
-                            <button 
-                                className={this.state.viewMode === 'visual' ? 'active' : ''}
-                                onClick={() => this.setState({viewMode: 'visual'})}
-                            >Charm Editor</button>
-                            <button 
-                                className={this.state.viewMode === 'text' ? 'active' : ''}
-                                onClick={() => this.setState({viewMode: 'text'})}
-                            >Raw JSON</button>
+                            <button className={viewMode === 'visual' ? 'active' : ''} onClick={() => setViewMode('visual')}>Visual</button>
+                            <button className={viewMode === 'text' ? 'active' : ''} onClick={() => setViewMode('text')}>JSON</button>
                         </div>
                     </div>
 
-                    {/* RENDER LOGIC */}
-                    {this.state.viewMode === 'text' ? (
+                    {viewMode === 'text' || !isValidJson ? (
                         <textarea 
                             id="editor" 
-                            onChange={this.handleTextEditorChange} 
-                            value={this.state.gameFile} 
-                            spellCheck={false}
+                            value={fileData} 
+                            onChange={(e) => setFileData(e.target.value)} 
+                            spellCheck={false} 
                         />
                     ) : (
-                        isValidJson ? (
-                            <div id="visual-editor">
-                                <CharmEditor 
-                                    data={parsedData} 
-                                    onUpdate={this.handleVisualUpdate} 
-                                />
-                            </div>
-                        ) : (
-                            <div className="error-box">Invalid JSON. Please fix syntax in Text Mode.</div>
-                        )
+                        <div id="visual-editor">
+                            <CharmEditor data={parsedData} onUpdate={handleVisualUpdate} />
+                        </div>
                     )}
 
                     <div id="editor-buttons">
-                        <button onClick={this.handleReset}>Reset Changes</button>
-                        <button onClick={() => this.handleDownload('switch')}>Download (Switch/Plain)</button>
-                        <button onClick={() => this.handleDownload('pc')}>Download (PC/Encrypted)</button>
+                        <button onClick={() => setFileData(originalData)}>Reset</button>
+                        <button onClick={() => handleDownload('switch')}>Download (Decrypted)</button>
+                        <button onClick={() => handleDownload('pc')}>Download (Encrypted)</button>
                     </div>
                 </div>
             )}
 
-            <HistoryComponent 
-                handleClick={(jsonString, fileName) => this.setGameFile(jsonString, fileName)}
-            />
+            {history.length > 0 && (
+                <div id="history">
+                    <h3>Recent Files</h3>
+                    <ul>
+                        {history.map((item) => (
+                            <li key={item.hash} onClick={() => { setFileData(item.jsonString); setFileName(item.fileName); }}>
+                                {item.fileName} <small>({HumanTime(new Date(item.date))})</small>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
         </div>
-    }
+    );
 }
 
-class HistoryComponent extends React.Component {
-    componentDidMount() {
-        history.onChange = () => this.forceUpdate()
-    }
-    render(){
-        if (history.count() == 0) return null 
-        return (
-            <div id="history">
-                <div className="history-header">Recent Files</div>
-                <ul>
-                    {history.history.map(item => (
-                        <li 
-                            key={item.hash}
-                            onClick={() => {
-                                this.props.handleClick(item.jsonString, item.fileName)
-                                window.scrollTo(0, 0)
-                            }} 
-                            onContextMenu={e => { 
-                                history.removeFromHistory(item.hash); 
-                                e.preventDefault(); 
-                                history.syncToLocalStorage()
-                            }} 
-                            className="history-item"
-                        >
-                            <div className="history-name">{item.fileName} <small>(Hash: {item.hash})</small></div>
-                            <div className="history-date">{HumanTime(item.date)}</div>
-                        </li>
-                    ))}
-                </ul>
-            </div>
-        )
-    }
-}
-
-ReactDOM.render(<App/>, document.querySelector("#root"))
+const root = createRoot(document.getElementById("root"));
+root.render(<App />);
